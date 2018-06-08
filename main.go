@@ -6,6 +6,9 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/satori/go.uuid"
+	"encoding/json"
 )
 
 func main() {
@@ -41,12 +44,39 @@ func ImageUpload(w http.ResponseWriter, req *http.Request) {
 			io.WriteString(w, "Image is too large!")
 			return
 		}
+		item := NewUnprocessedImage(Image)
 		Image.Reset()
-		io.WriteString(w, "Image uploaded successfully\n")
+
+		response := OKResponse{item.ID}
+		ok, err := json.Marshal(response)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			io.WriteString(w, "Internal server error!")
+			return
+		}
+		io.WriteString(w, string(ok))
 		return
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 		io.WriteString(w, "Not found!")
 		return
 	}
+}
+
+type OKResponse struct{
+	ImageId string `json:"image_id"`
+}
+
+func NewUnprocessedImage(image bytes.Buffer) UnprocessedImage{
+	id := uuid.Must(uuid.NewV4())
+	fmt.Printf("Image id %s\n", id.String())
+	return UnprocessedImage{
+		id.String(),
+		image,
+	}
+}
+type UnprocessedImage struct{
+	ID string
+	Image bytes.Buffer
+
 }
